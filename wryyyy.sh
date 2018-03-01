@@ -13,13 +13,15 @@ Get_IP(){
 	fi
 }
 
-apt-get install -y curl
+apt-get install -y curl git
 
 bash <(curl -L -s https://install.direct/go.sh)
 
-curl -s -o caddy_install.sh  https://raw.githubusercontent.com/ToyoDAdoubi/doubi/master/caddy_install.sh && chmod +x caddy_install.sh && bash caddy_install.sh install http.forwardproxy
+curl -o caddy_install.sh  https://raw.githubusercontent.com/ToyoDAdoubi/doubi/master/caddy_install.sh && chmod +x caddy_install.sh && bash caddy_install.sh install http.forwardproxy
 
-curl -s -o /etc/v2ray/config.json https://raw.githubusercontent.com/KiriKira/vTemplate/master/websocket%2BCaddy%2BTLS\(use%20path\)/config_server.json
+curl -o /etc/v2ray/config.json https://raw.githubusercontent.com/KiriKira/vTemplate/master/websocket%2BCaddy%2BTLS\(use%20path\)/config_server.json
+
+git clone https://github.com/KiriKira/scripts.git && cd scripts
 
 Get_IP
 python wryyy.pyo $ip
