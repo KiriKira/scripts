@@ -13,6 +13,8 @@ Get_IP(){
 	fi
 }
 
+apt-get install curl
+
 wget https://install.direct/go.sh && bash go.sh
 
 wget https://raw.githubusercontent.com/ToyoDAdoubi/doubi/master/caddy_install.sh && chmod +x caddy_install.sh && bash caddy_install.sh install http.forwardproxy
