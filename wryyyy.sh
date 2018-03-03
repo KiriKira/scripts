@@ -27,6 +27,6 @@ Get_IP
 python wryyy.py $ip
 
 service v2ray restart
-echo "等待两分钟以保证dns记录生效, 如果等会caddy依然没起来就手动重启吧"
-sleep 2m
+echo "等待五分钟以保证dns记录生效, 当然你也可以退出脚本一会自己重启caddy, 如果等待完caddy依然没起来就手动重启吧"
+sleep 5m
 service caddy restart
