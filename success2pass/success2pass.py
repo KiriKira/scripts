@@ -20,7 +20,7 @@ setting = {
 
 settings.configure(**setting)
 
-CMD_TEMPLATE = "ufw allow from {} to {} port 22"
+CMD_TEMPLATE = "ufw allow from {}"
 
 
 class JSONResponse(HttpResponse):
