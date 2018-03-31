@@ -98,3 +98,5 @@ ENV/
 
 # mypy
 .mypy_cache/
+success2pass/file.pid
+.vscode/

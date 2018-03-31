@@ -1,0 +1,20 @@
+[[source]]
+
+verify_ssl = true
+name = "pypi"
+url = "https://pypi.python.org/simple"
+
+
+[requires]
+
+python_version = "3.5"
+
+
+[packages]
+
+django = "==1.8"
+uwsgi = "*"
+
+
+[dev-packages]
+

@@ -1,0 +1,10 @@
+<uwsgi>
+    <http>:8001</http>
+    <chdir>/home/kiri/projects/scripts/success2pass</chdir>
+    <module>success2pass</module>
+    <master>1</master>
+    <processes>1</processes> <!-- 进程数 -->
+    <buffer-size>32768</buffer-size>
+    <pidfile>/home/kiri/projects/scripts/success2pass/file.pid</pidfile>
+</uwsgi>
+
