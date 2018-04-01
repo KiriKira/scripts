@@ -46,6 +46,10 @@ def get_client_ip(request):
         ip = request.META.get('HTTP_X_REAL_IP')
     else:
         ip = request.META.get('REMOTE_ADDR')
+
+    # if you want add range /24 to the rule:
+    # s = ip.split(".")
+    # ip = "{}.{}.{}.0/24".format(s[0], s[1], s[2])
     return ip
 
 
@@ -63,6 +67,7 @@ def s2pview(request):
             ip + " is added to the rules."}
     return JSONResponse(resp)
 
+# set any path as you like.
 urlpatterns = [url('^s2ptest$', s2ptestview, name="s2ptestview"),
                url('^s2p$', s2pview, name="s2pview")]
 
