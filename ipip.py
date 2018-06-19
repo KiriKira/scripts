@@ -1,10 +1,11 @@
 #!/usr/bin/python3
 
-import requests, sys
+import requests
+import sys
 from bs4 import Tag, BeautifulSoup as soup
 from prettytable import PrettyTable
 
-url = "http://ipip.net/ip.html"
+url = "https://www.ipip.net/ip.html"
 
 headers = {
     'origin': "http://ipip.net",
@@ -16,7 +17,8 @@ headers = {
     'accept-encoding': "gzip, deflate",
     'accept-language': "zh-CN,zh;q=0.9,en;q=0.8,zh-HK;q=0.7,zh-TW;q=0.6",
     'cache-control': "no-cache"
-    }
+}
+
 
 class Extractor(object):
     '''The extractor for parsing HTML tables into python lists.'''
@@ -33,31 +35,22 @@ class Extractor(object):
 
         self.output = []
 
-
     def parse(self):
         current_row = 0
         for row in self.table.find_all("tr"):
             for cell in row.children:
                 if cell.name in ["th", "td"]:
-                    
-                    if cell.string == "IDC" or cell.a:
-                        continue
 
-                    body = str(cell.string) if cell.string \
-                        else str(cell.span.string) if cell.span \
-                        else str(cell)[4:-5].replace("<br/>", "\n")
+                    body = cell.text
                     self.insert_cell(current_row, body)
             current_row += 1
 
         return self.output
 
-
     def insert_cell(self, row_number, body):
         if len(self.output) <= row_number:
             self.output.append([])
         self.output[row_number].append(body)
-        
-                  
 
 
 '''
@@ -90,9 +83,11 @@ def request_ip(ip_addr):
     return row1, row2, row3
 '''
 
+
 def request_ip(ip_addr):
-    data = [('ip', ip_addr),]
-    response = requests.post('http://ipip.net/ip.html', headers=headers, data=data)
+    data = [('ip', ip_addr), ]
+    response = requests.post(url,
+                             headers=headers, data=data)
     sp = soup(response.text, 'html.parser')
     tables = sp.find_all("table")
     return tables
@@ -108,6 +103,7 @@ def create_table(rows):
 
     return tables
 
+
 def main():
     #ip_or_domain_or_url = "1.1.1.1"
     ip_or_domain_or_url = str(sys.argv[1])
@@ -122,17 +118,15 @@ def main():
 
     for html_table in html_tables:
         if str(html_table.th.string) == "网络安全风控基础数据" \
-            or (html_table.a and str(html_table.a.string)) == "RTBAsia非人类访问量甄别服务":
+                or (html_table.a and str(html_table.a.string)) == "RTBAsia非人类访问量甄别服务":
             continue
         tables.append(Extractor(html_table).parse())
-
 
     printable_tables = create_table(tables)
 
     for table in printable_tables:
         print(table)
 
+
 if __name__ == "__main__":
     main()
-
-
