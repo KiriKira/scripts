@@ -1,13 +1,41 @@
 #!/usr/bin/python3
 
+"""
+
+　　　　　　 ／. . . . .／. . . . . . . . . . . . /. . . . . . . . . .＼
+　　　　　　. . . . . . . . . . . . . . . . . . . . /. .　. │. . . . . .　＼
+　　　 　 .′. . . ./ . . . . . . . . . . . . . . |. . . .　.| . . . . . . . . . .
+　　　 　 . . . .　/ . . . . . . . . . . . . . . . |. . . .　.|. . . . |. . . . . .|
+　　　　 ｉ . . .　.| . . . . . . . . ./ . . . ／ |. . . .　.|. . . . |. . . . .l |
+　　　　 | . . .　.| . . . . . . . ./＼ ／ 　 |. . . .　.|、 . . |. . .│|ﾉ
+　　　　 |. ./. . .| . . . . . . ./. .／＼_,､八 . . . . | Х. .|. . .│|
+　　　　 ∨. ./.ｉ|. . . . . . /l ,.斗午斥 　 ＼. .斗-ミV|. . .│|
+　 　 　 ∧. .|l.人|ｉ | . |/　く　rＪ}}￤　　　 ヽ_j丁｝V. ./.∧|
+.　　　　|. .j￣＼八| . | 　 　 乂_ツ　　　 　 ﾋツ　〈／./　　　　　
+.　　 　 乂. .__,ノ| {_＼ト-　￤ 　 　 　 　 　 , 　 ｉﾄ |／
+　　　 ⌒〈`j⌒Y＞r‐ヘ. 　 し　　　　　　 　 　 八
+　 　 　 　 ＞‐く_,ノ厶｝:.丶　　 　 （`フ 　　 ／
+　　　　　　　　　厂￣＼ 　 　 　 　 　 ,.　イ
+　　　　　　　 ／>､.　 　 ＼　　 /≧=（＼
+　　　　 　 ／／　 ＼ 　 　 ＼/|　　　|＼＼
+
+"""
+
+__author__ = "Kiri Kira"
+__licence__ = "GPL"
+__email__ = "kiri_so@outlook.com"
+__status__ = "production"
+
 import requests
-import sys
+import argparse
 from bs4 import Tag, BeautifulSoup as soup
 from prettytable import PrettyTable
+from threading import Timer, Thread
+from time import sleep
 
-url = "https://www.ipip.net/ip.html"
+URL = "https://www.ipip.net/ip.html"
 
-headers = {
+HEADERS = {
     'origin': "http://ipip.net",
     'upgrade-insecure-requests': "1",
     'content-type': "application/x-www-form-urlencoded",
@@ -53,41 +81,10 @@ class Extractor(object):
         self.output[row_number].append(body)
 
 
-'''
-def request_ip(ip_addr):
-    data = [('ip', ip_addr),]
-    response = requests.post('http://ipip.net/ip.html', headers=headers, data=data)
-    sp = soup(response.text, 'html.parser')
-    tables = sp.find_all("table")
-
-    row1_1 = list(map(lambda item: str(item.string), tables[0].find_all("td")[0:3:2]))
-    row1_2 = list(map(lambda item: str(item.string), tables[0].find_all("td")[1:4:2]))
-    row1 = []
-
-    for i in range(2):
-        row1.append([row1_1[i], row1_2[i]])
-
-    row2_1 = list(map(lambda item: str(item.string), tables[1].find_all("th")))
-    try:
-        row2_2 = list(map(lambda item: str(item.string), tables[1].find_all("td")))
-    except Exception:
-        row2_2 = None
-
-    row2 = [row2_1, row2_2]
-
-    row3_1 = list(map(lambda item: str(item.string), tables[2].find_all("th")))
-    row3_2 = list(map(lambda item: str(item)[4:-5].replace("<br/>", "\n"), tables[2].find_all("td")))
-
-    row3 = [row3_1, row3_2]
-
-    return row1, row2, row3
-'''
-
-
 def request_ip(ip_addr):
     data = [('ip', ip_addr), ]
-    response = requests.post(url,
-                             headers=headers, data=data)
+    response = requests.post(URL,
+                             headers=HEADERS, data=data)
     sp = soup(response.text, 'html.parser')
     tables = sp.find_all("table")
     return tables
@@ -103,16 +100,76 @@ def create_table(rows):
 
     return tables
 
+class Rainbow(object):
+    """This class is used to print rainbow-like progress anime."""
+    def __init__(self, text):
+        self.text = text
+        self.times = 0
+        self.colors = list(map(lambda num: "\033[" + str(num) + "m", range(31, 38)))
+        self.thread = Thread(target=self.cycle)
+        self._running = False
+    
+    def cprint(self):
+        colored_str = ""
+        new_colors = self.colors[self.times%7:] + self.colors[:self.times%7]
+        for i in range(len(self.text)):
+            colored_str += new_colors[i%7] + self.text[i]
+        print(colored_str, end="\r")
+        self.times += 1
 
-def main():
-    #ip_or_domain_or_url = "1.1.1.1"
-    ip_or_domain_or_url = str(sys.argv[1])
+    def cycle(self):
+        while self._running:
+            self.cprint()
+            sleep(0.1)
+
+    def start_shining(self):
+        self._running = True
+        self.thread.start()
+
+    def stop_shining(self):
+        self._running = False
+        print("", end="")
+
+
+def domain_ip_parser(ip_or_domain_or_url, local_dns):
+    """parsing the arg to get the hostname to query."""
+    #ip_or_domain_or_url = str(sys.argv[1])
     if ip_or_domain_or_url.startswith("https://") or ip_or_domain_or_url.startswith("http://"):
         ip_or_domain = ip_or_domain_or_url.split('/')[2]
+    elif ip_or_domain_or_url == ".":
+        ip_or_domain = ""
     else:
         ip_or_domain = ip_or_domain_or_url
 
+    if local_dns:
+        import socket
+        ip_or_domain = socket.gethostbyname(ip_or_domain)
+
+    return ip_or_domain
+
+
+def main():
+
+    rb = Rainbow("已经在努力查询啦")
+    rb.start_shining()
+
+    parser = argparse.ArgumentParser(
+        description="A script that helps you to get information via https://ipip.net")
+
+    parser.add_argument('ip_or_domain_or_url', type=str,
+                        help="Input the hostname or the url specifices the hostname you want to query. Pass nothing or a dot(.) to query where you are.",
+                        default='.', nargs='?')
+
+    parser.add_argument('-l', '--local',
+                        action='store_true', dest="local_dns",
+                        help="query host in local, and default is on IPIP's server")
+
     tables = []
+
+    args = parser.parse_args()
+
+    ip_or_domain = domain_ip_parser(
+        args.ip_or_domain_or_url, args.local_dns)
 
     html_tables = request_ip(ip_or_domain)
 
@@ -123,6 +180,8 @@ def main():
         tables.append(Extractor(html_table).parse())
 
     printable_tables = create_table(tables)
+
+    rb.stop_shining()
 
     for table in printable_tables:
         print(table)
