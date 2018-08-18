@@ -150,9 +150,6 @@ def domain_ip_parser(ip_or_domain_or_url, local_dns):
 
 def main():
 
-    rb = Rainbow("已经在努力查询啦")
-    rb.start_shining()
-
     parser = argparse.ArgumentParser(
         description="A script that helps you to get information via https://ipip.net")
 
@@ -167,6 +164,9 @@ def main():
     tables = []
 
     args = parser.parse_args()
+
+    rb = Rainbow("已经在努力查询啦")
+    rb.start_shining()
 
     ip_or_domain = domain_ip_parser(
         args.ip_or_domain_or_url, args.local_dns)
