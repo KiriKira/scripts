@@ -28,12 +28,15 @@ __status__ = "production"
 
 import requests
 import argparse
+import pickle
+import os
 from bs4 import Tag, BeautifulSoup as soup
 from prettytable import PrettyTable
 from threading import Timer, Thread
 from time import sleep
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
 
-URL = "https://www.ipip.net/ip.html"
 
 HEADERS = {
     'origin': "http://ipip.net",
@@ -46,6 +49,8 @@ HEADERS = {
     'accept-language': "zh-CN,zh;q=0.9,en;q=0.8,zh-HK;q=0.7,zh-TW;q=0.6",
     'cache-control': "no-cache"
 }
+
+PATH_COOKIE = "/home/kiri/tmp/"
 
 
 class Extractor(object):
@@ -81,39 +86,23 @@ class Extractor(object):
         self.output[row_number].append(body)
 
 
-def request_ip(ip_addr):
-    data = [('ip', ip_addr), ]
-    response = requests.post(URL,
-                             headers=HEADERS, data=data)
-    sp = soup(response.text, 'html.parser')
-    tables = sp.find_all("table")
-    return tables
-
-
-def create_table(rows):
-    tables = []
-    for row in rows:
-        pt = PrettyTable(row[0])
-        for item in row[1:]:
-            pt.add_row(item)
-        tables.append(pt)
-
-    return tables
-
 class Rainbow(object):
-    """This class is used to print rainbow-like progress anime."""
+    """This class is used to print rainbow-like progress animation."""
+
     def __init__(self, text):
         self.text = text
         self.times = 0
-        self.colors = list(map(lambda num: "\033[" + str(num) + "m", range(31, 38)))
+        self.colors = list(
+            map(lambda num: "\033[" + str(num) + "m", range(31, 38)))
         self.thread = Thread(target=self.cycle)
         self._running = False
-    
+
     def cprint(self):
         colored_str = ""
-        new_colors = self.colors[self.times%7:] + self.colors[:self.times%7]
+        new_colors = self.colors[self.times %
+                                 7:] + self.colors[:self.times % 7]
         for i in range(len(self.text)):
-            colored_str += new_colors[i%7] + self.text[i]
+            colored_str += new_colors[i % 7] + self.text[i]
         print(colored_str, end="\r")
         self.times += 1
 
@@ -129,6 +118,81 @@ class Rainbow(object):
     def stop_shining(self):
         self._running = False
         print("", end="")
+
+
+def request_ip(url, ip_addr, en=False):
+    data = [('ip', ip_addr), ]
+
+    if en:
+        response = requests.post(url, headers=HEADERS,
+                                 data=data)
+        return find_table(response.text)
+
+    cookies = load_cookie()
+
+    if cookies:
+        response = requests.post(url, headers=HEADERS,
+                                 data=data, cookies=cookies)
+        if response.status_code != 200:
+            return find_table(selenium_ip(url, ip_addr))
+        return find_table(response.text)
+    
+    return find_table(selenium_ip(url, ip_addr))
+
+def find_table(source):
+    sp = soup(source, 'html.parser')
+    tables = sp.find_all("table")
+    return tables
+
+def create_driver():
+    option = webdriver.ChromeOptions()
+    option.add_argument("--headless")
+    option.add_argument("--host-resolver-rules=MAP www.google-analytics.com 127.0.0.1")
+    option.add_argument('user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36')
+    return webdriver.Chrome(options=option)
+
+def selenium_ip(url, ip_addr):
+    driver = create_driver()
+    driver.implicitly_wait(10)
+    driver.set_page_load_timeout(10)
+
+    driver.get(url)
+    ele = driver.find_element_by_xpath("/html/body/div[2]/form/input")
+    if ip_addr:
+        ele.clear()
+        ele.send_keys(ip_addr)
+        ele.send_keys(Keys.ENTER)
+    save_cookie(driver)
+
+    return driver.page_source
+
+
+def save_cookie(driver):
+    pickle.dump(driver.get_cookies(), open(PATH_COOKIE + "cookies.pkl", "wb"))
+
+def load_cookie():
+    cookies = pickle.load(open(PATH_COOKIE + "cookies.pkl", "rb"))\
+        if os.path.exists(PATH_COOKIE + "cookies.pkl") else None
+
+    if cookies:
+        cookie_set = dict()
+        for cookie in cookies:
+            cookie_set[cookie['name']] = cookie['value']
+    else:
+        return None
+
+    return cookie_set
+    
+
+def create_table(rows):
+    tables = []
+    for row in rows:
+        pt = PrettyTable(row[0])
+        for item in row[1:]:
+            pt.add_row(item)
+        tables.append(pt)
+
+    return tables
 
 
 def domain_ip_parser(ip_or_domain_or_url, local_dns):
@@ -161,9 +225,27 @@ def main():
                         action='store_true', dest="local_dns",
                         help="query host in local, and default is on IPIP's server")
 
+    parser.add_argument('-w', '--webbrowser',
+                        action='store_true', dest="browser",
+                        help="open https://ipip.net in webbrowser")
+
+    parser.add_argument('-e', '--english',
+                        action='store_true', dest="en",
+                        help="use en.ipip.net as source. Since Chinese version will challenge visiter now, user -e may make it faster.")
+
     tables = []
 
     args = parser.parse_args()
+
+    if args.browser:
+        import webbrowser
+        webbrowser.open("https://www.ipip.net/ip.html")
+        return
+
+    if args.en:
+        URL = "https://en.ipip.net/ip.html"
+    else:
+        URL = "https://www.ipip.net/ip.html"
 
     rb = Rainbow("已经在努力查询啦")
     rb.start_shining()
@@ -171,7 +253,7 @@ def main():
     ip_or_domain = domain_ip_parser(
         args.ip_or_domain_or_url, args.local_dns)
 
-    html_tables = request_ip(ip_or_domain)
+    html_tables = request_ip(URL, ip_or_domain)
 
     for html_table in html_tables:
         if str(html_table.th.string) == "网络安全风控基础数据" \
