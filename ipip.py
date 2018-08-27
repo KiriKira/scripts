@@ -50,7 +50,7 @@ HEADERS = {
     'cache-control': "no-cache"
 }
 
-PATH_COOKIE = "/home/kiri/tmp/"
+PATH_COOKIE = "/tmp/"
 
 
 class Extractor(object):
@@ -133,9 +133,8 @@ def request_ip(url, ip_addr, en=False):
     if cookies:
         response = requests.post(url, headers=HEADERS,
                                  data=data, cookies=cookies)
-        if response.status_code != 200:
-            return find_table(selenium_ip(url, ip_addr))
-        return find_table(response.text)
+        if response.status_code == 200:
+            return find_table(response.text)
     
     return find_table(selenium_ip(url, ip_addr))
 
@@ -195,7 +194,7 @@ def create_table(rows):
     return tables
 
 
-def domain_ip_parser(ip_or_domain_or_url, local_dns):
+def domain_ip_parser(ip_or_domain_or_url, local_dns, ipv6):
     """parsing the arg to get the hostname to query."""
     #ip_or_domain_or_url = str(sys.argv[1])
     if ip_or_domain_or_url.startswith("https://") or ip_or_domain_or_url.startswith("http://"):
@@ -208,6 +207,9 @@ def domain_ip_parser(ip_or_domain_or_url, local_dns):
     if local_dns:
         import socket
         ip_or_domain = socket.gethostbyname(ip_or_domain)
+    elif ipv6:
+        import socket
+        ip_or_domain = socket.getaddrinfo(ip_or_domain, None, socket.AF_INET6)[0][-1][0]
 
     return ip_or_domain
 
@@ -221,17 +223,20 @@ def main():
                         help="Input the hostname or the url specifices the hostname you want to query. Pass nothing or a dot(.) to query where you are.",
                         default='.', nargs='?')
 
-    parser.add_argument('-l', '--local',
+    parser.add_argument('-l', "--local",
                         action='store_true', dest="local_dns",
                         help="query host in local, and default is on IPIP's server")
 
-    parser.add_argument('-w', '--webbrowser',
+    parser.add_argument('-w', "--webbrowser",
                         action='store_true', dest="browser",
                         help="open https://ipip.net in webbrowser")
 
-    parser.add_argument('-e', '--english',
+    parser.add_argument('-e', "--english",
                         action='store_true', dest="en",
-                        help="use en.ipip.net as source. Since Chinese version will challenge visiter now, user -e may make it faster.")
+                        help="use en.ipip.net as source. Since Chinese version will challenge visiter now, use -e may make it faster.")
+
+    parser.add_argument('-6', action="store_true", dest="ipv6",
+                        help="query for ipv6 address")
 
     tables = []
 
@@ -251,7 +256,7 @@ def main():
     rb.start_shining()
 
     ip_or_domain = domain_ip_parser(
-        args.ip_or_domain_or_url, args.local_dns)
+        args.ip_or_domain_or_url, args.local_dns, args.ipv6)
 
     html_tables = request_ip(URL, ip_or_domain)
 
