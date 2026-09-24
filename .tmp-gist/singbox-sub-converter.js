@@ -298,6 +298,8 @@ function buildConfig(params) {
   const headscaleUrl = params.headscale || "";
   const authKey = params.authKey || "YOUR_HEADSCALE_PREAUTH_KEY_HERE";
   const hostname = params.hostname || "sing-box-device";
+  const exitNode = params.exitNode || "";
+  const exitWifi = params.exitWifi || "Synopsys";
   const nodeTags = proxies.map((p) => p.tag);
   const outbounds = [];
   outbounds.push({ type: "direct", tag: "direct" });
@@ -390,6 +392,22 @@ function buildConfig(params) {
     });
   }
   routeRules.push({ protocol: "dns", action: "hijack-dns" });
+  if (headscaleUrl && exitNode && exitWifi) {
+    routeRules.push({
+      wifi_ssid: [exitWifi],
+      domain_suffix: ["kiri.homes"],
+      outbound: "ts-endpoint"
+    });
+    routeRules.push({
+      wifi_ssid: [exitWifi],
+      rule_set: ["geosite-cn", "geoip-cn"],
+      outbound: "ts-endpoint"
+    });
+    routeRules.push({
+      wifi_ssid: [exitWifi],
+      outbound: "direct"
+    });
+  }
   if (headscaleUrl) {
     routeRules.push({ domain_suffix: ["kiri.homes"], outbound: "ts-endpoint" });
   }
@@ -482,7 +500,7 @@ function buildConfig(params) {
     }
   };
   if (headscaleUrl) {
-    config.endpoints = [{
+    const tsEndpoint = {
       type: "tailscale",
       tag: "ts-endpoint",
       control_url: headscaleUrl,
@@ -491,7 +509,11 @@ function buildConfig(params) {
       accept_routes: true,
       ephemeral: false,
       domain_resolver: "dns_resolver"
-    }];
+    };
+    if (exitNode) {
+      tsEndpoint.exit_node = exitNode;
+    }
+    config.endpoints = [tsEndpoint];
   }
   config.experimental = {
     clash_api: {
@@ -512,12 +534,14 @@ var index_default = {
       return new Response(
         JSON.stringify({
           error: 'Missing "sub" parameter',
-          usage: "GET /?sub=<clash_subscription_url>&headscale=<headscale_url>&hostname=<hostname>&auth_key=<auth_key>",
+          usage: "GET /?sub=<clash_subscription_url>&headscale=<headscale_url>&hostname=<hostname>&auth_key=<auth_key>&exit_node=<node_name_or_ip>&exit_wifi=Synopsys",
           params: {
             sub: "(required) Clash subscription URL",
             headscale: "(optional) Headscale server URL",
             hostname: "(optional) Tailscale hostname, default: sing-box-device",
-            auth_key: "(optional) Headscale preauth key"
+            auth_key: "(optional) Headscale preauth key",
+            exit_node: "(optional) Tailscale/Headscale exit node name or IP; enables Wi-Fi override routing",
+            exit_wifi: "(optional) Wi-Fi SSID for exit-node override, default: Synopsys"
           }
         }, null, 2),
         {
@@ -548,7 +572,9 @@ var index_default = {
         clashData,
         headscale: url.searchParams.get("headscale") || "",
         authKey: url.searchParams.get("auth_key") || "",
-        hostname: url.searchParams.get("hostname") || "sing-box-device"
+        hostname: url.searchParams.get("hostname") || "sing-box-device",
+        exitNode: url.searchParams.get("exit_node") || "",
+        exitWifi: url.searchParams.get("exit_wifi") || "Synopsys"
       });
       return new Response(
         JSON.stringify(config, null, 2),
