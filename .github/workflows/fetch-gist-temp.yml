@@ -1,0 +1,50 @@
+name: Fetch public gist temporarily
+
+on:
+  push:
+    paths:
+      - ".github/workflows/fetch-gist-temp.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch gist files
+        shell: bash
+        run: |
+          rm -rf .tmp-gist
+          mkdir -p .tmp-gist
+          python - <<'PY'
+          import json
+          import pathlib
+          import urllib.request
+
+          gist_id = "3ac12702de1b682d3439400e1b35e3a7"
+          req = urllib.request.Request(
+              f"https://api.github.com/gists/{gist_id}",
+              headers={"Accept": "application/vnd.github+json", "User-Agent": "gist-fetch-action"},
+          )
+          with urllib.request.urlopen(req) as response:
+              data = json.load(response)
+
+          out = pathlib.Path(".tmp-gist")
+          for name, info in data["files"].items():
+              content = info.get("content")
+              if content is None:
+                  with urllib.request.urlopen(info["raw_url"]) as response:
+                      content = response.read().decode("utf-8")
+              (out / name).write_text(content, encoding="utf-8")
+          PY
+      - name: Commit fetched source
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .tmp-gist
+          git commit -m "tmp: fetch worker gist source"
+          git push
