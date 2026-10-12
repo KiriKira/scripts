@@ -20,9 +20,10 @@ var ANTHROPIC_TAG = "🧠 Anthropic";
 var WARP_TAG = "☁️ WARP";
 var WARP_CHAIN_TAG = "🔗 节点选择 → WARP";
 // Core domains from the referenced tweet plus Claude domains in DustinWin ai.srs.
-var ANTHROPIC_DOMAINS = ["anthropic.com", "claude.ai", "claude.com", "clau.de", "claude.dev", "claudemcpclient.com", "claudemcpcontent.com", "claudeusercontent.com"];
-// Exact hosts only: never divert entire shared CDN/auth/telemetry providers.
-var ANTHROPIC_HOSTS = ["servd-anthropic-website.b-cdn.net", "anthropic.com.cdn.cloudflare.net", "anthropic.auth0.com", "anthropic-com.ghost.io"];
+var ANTHROPIC_DOMAINS = ["anthropic.com", "claude.ai", "claude.com", "clau.de", "claude.dev", "claudemcpclient.com", "claudemcpcontent.com", "claudeusercontent.com", "sentry.io", "statsigapi.net", "intercom.io", "intercomcdn.com"];
+// Include shared providers exactly as requested in the referenced tweet.
+var ANTHROPIC_HOSTS = ["servd-anthropic-website.b-cdn.net", "anthropic.com.cdn.cloudflare.net", "anthropic.auth0.com", "anthropic-com.ghost.io", "browser-intake-us5-datadoghq.com", "cdn.usefathom.com"];
+var ANTHROPIC_KEYWORDS = ["datadog", "sift"];
 // Anthropic-owned ARIN allocations; do not resolve domains merely to match these.
 var ANTHROPIC_IPS = ["160.79.104.0/21", "2607:6bc0::/32"];
 var COUNTRY_PATTERNS = {
@@ -403,7 +404,7 @@ function buildConfig(params) {
   routeRules.push({ action: "sniff" });
   routeRules.push({ protocol: "dns", action: "hijack-dns" });
   // Highest destination priority: independent of Wi-Fi/LAN/exit-node rules.
-  routeRules.push({ domain_suffix: ANTHROPIC_DOMAINS, domain: ANTHROPIC_HOSTS, outbound: ANTHROPIC_TAG });
+  routeRules.push({ domain_suffix: ANTHROPIC_DOMAINS, domain: ANTHROPIC_HOSTS, domain_keyword: ANTHROPIC_KEYWORDS, outbound: ANTHROPIC_TAG });
   if (ANTHROPIC_IPS.length) routeRules.push({ ip_cidr: ANTHROPIC_IPS, outbound: ANTHROPIC_TAG });
   routeRules.push({
     wifi_ssid: ["DOWNTOWNBABY"],
