@@ -312,6 +312,7 @@ function buildConfig(params) {
   const exitNode = params.exitNode || "";
   const exitWifi = params.exitWifi || "Synopsys";
   const warpProfiles = params.warpProfiles || null;
+  const useHttpClients = params.useHttpClients !== false;
   const nodeTags = proxies.map((p) => p.tag);
   const reservedTags = new Set([ANTHROPIC_TAG, WARP_TAG, WARP_CHAIN_TAG]);
   if (nodeTags.some((tag) => reservedTags.has(tag))) throw new Error("Subscription node tag conflicts with WARP/Anthropic tags");
@@ -457,7 +458,7 @@ function buildConfig(params) {
   const dns = {
     servers: [
       { tag: "dns_direct", type: "https", server: "223.5.5.5", domain_resolver: "dns_resolver" },
-      { tag: "dns_proxy", type: "https", server: "1.1.1.1", domain_resolver: "dns_resolver" },
+      { tag: "dns_proxy", type: "https", server: "1.1.1.1", domain_resolver: "dns_resolver", detour: mainProxy },
       { tag: "dns_fakeip", type: "fakeip", inet4_range: "28.0.0.0/8", inet6_range: "fc00::/16" },
       { tag: "dns_resolver", type: "https", server: "223.5.5.5" }
     ],
@@ -524,6 +525,10 @@ function buildConfig(params) {
       default_domain_resolver: "dns_resolver"
     }
   };
+  if (useHttpClients) {
+    config.http_clients = [{ tag: "rule-set-download", detour: config.route.final }];
+    config.route.default_http_client = "rule-set-download";
+  }
   if (headscaleUrl) {
     const tsEndpoint = {
       type: "tailscale",
@@ -608,7 +613,8 @@ var index_default = {
             auth_key: "(optional) Headscale preauth key",
             exit_node: "(optional) Tailscale/Headscale exit node name or IP; enables Wi-Fi override routing",
             exit_wifi: "(optional) Wi-Fi SSID for exit-node override, default: Synopsys",
-            warp_key: "(optional) Access key for server-stored WARP profiles; enables direct WARP and node-selection-to-WARP chain"
+            warp_key: "(optional) Access key for server-stored WARP profiles; enables direct WARP and node-selection-to-WARP chain",
+            http_clients: "(optional) default 1; explicit remote rule-set HTTP client for sing-box 1.14+. Set 0 only for <=1.13 clients"
           }
         }, null, 2),
         {
@@ -644,7 +650,8 @@ var index_default = {
         authKey: url.searchParams.get("auth_key") || "",
         hostname: url.searchParams.get("hostname") || "sing-box-device",
         exitNode: url.searchParams.get("exit_node") || "",
-        exitWifi: url.searchParams.get("exit_wifi") || "Synopsys"
+        exitWifi: url.searchParams.get("exit_wifi") || "Synopsys",
+        useHttpClients: url.searchParams.get("http_clients") !== "0"
       });
       return new Response(
         JSON.stringify(config, null, 2),
