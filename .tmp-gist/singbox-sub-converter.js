@@ -18,7 +18,7 @@ var AI_PLATFORM_REGEX = /(google|谷歌|gemini|openai|chatgpt|claude|anthropic|b
 // Destination matching is independent from subscription node-name matching.
 var ANTHROPIC_TAG = "🧠 Anthropic";
 var WARP_TAG = "☁️ WARP";
-var WARP_CHAIN_TAG = "🔗 节点选择 → WARP";
+var WARP_CHAIN_TAG = "🔗 AI 平台 → WARP";
 // Core domains from the referenced tweet plus Claude domains in DustinWin ai.srs.
 var ANTHROPIC_DOMAINS = ["anthropic.com", "claude.ai", "claude.com", "clau.de", "claude.dev", "claudemcpclient.com", "claudemcpcontent.com", "claudeusercontent.com", "sentry.io", "statsigapi.net", "intercom.io", "intercomcdn.com"];
 // Include shared providers exactly as requested in the referenced tweet.
@@ -549,7 +549,7 @@ function buildConfig(params) {
     config.endpoints = config.endpoints || [];
     config.endpoints.push(makeWarpEndpoint(warpProfiles.direct, WARP_TAG));
     // Separate registration prevents two WireGuard devices sharing one identity.
-    config.endpoints.push(makeWarpEndpoint(warpProfiles.chain, WARP_CHAIN_TAG, mainProxy));
+    config.endpoints.push(makeWarpEndpoint(warpProfiles.chain, WARP_CHAIN_TAG, aiSelector.tag));
   }
   config.experimental = {
     clash_api: {
@@ -613,7 +613,7 @@ var index_default = {
             auth_key: "(optional) Headscale preauth key",
             exit_node: "(optional) Tailscale/Headscale exit node name or IP; enables Wi-Fi override routing",
             exit_wifi: "(optional) Wi-Fi SSID for exit-node override, default: Synopsys",
-            warp_key: "(optional) Access key for server-stored WARP profiles; enables direct WARP and node-selection-to-WARP chain",
+            warp_key: "(optional) Access key for server-stored WARP profiles; enables direct WARP and AI-platform-to-WARP chain",
             http_clients: "(optional) default 1; explicit remote rule-set HTTP client for sing-box 1.14+. Set 0 only for <=1.13 clients"
           }
         }, null, 2),

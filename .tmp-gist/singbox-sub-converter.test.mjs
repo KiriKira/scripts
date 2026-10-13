@@ -23,8 +23,9 @@ for(const warpProfiles of [null,{direct:profile(),chain:profile()}]) {
   for(const domain of ['sentry.io','statsigapi.net','intercom.io','intercomcdn.com']) assert(c.route.rules[2].domain_suffix.includes(domain));
   assert.deepEqual(c.route.rules[2].domain_keyword,['datadog','sift']);
   if(warpProfiles) {
-    assert.equal(c.endpoints.find(x=>x.tag==='🔗 节点选择 → WARP').detour,'🚀 节点选择');
-    assert(!c.outbounds.find(x=>x.tag==='🚀 节点选择').outbounds.includes('🔗 节点选择 → WARP'));
+    assert.equal(c.endpoints.find(x=>x.tag==='🔗 AI 平台 → WARP').detour,'🤖 AI 平台');
+    assert(!c.outbounds.find(x=>x.tag==='🤖 AI 平台').outbounds.includes('🔗 AI 平台 → WARP'));
+    assert(!c.outbounds.find(x=>x.tag==='🚀 节点选择').outbounds.includes('🔗 AI 平台 → WARP'));
     const graph=new Map([...c.endpoints,...c.outbounds].map(x=>[x.tag,[...(x.outbounds||[]),...(x.detour?[x.detour]:[])]]));
     const visit=(tag,path=[])=>{assert(!path.includes(tag),'dependency cycle');for(const next of graph.get(tag)||[])visit(next,[...path,tag]);};
     for(const tag of graph.keys())visit(tag);
