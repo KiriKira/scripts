@@ -17,6 +17,8 @@ for(const warpProfiles of [null,{direct:profile(),chain:profile()}]) {
   assert(!c.dns.servers.find(x=>x.tag==='dns_resolver').detour);
   assert.deepEqual(c.http_clients,[{tag:'rule-set-download',detour:'🐟 漏网之鱼'}]);
   assert.equal(c.route.default_http_client,'rule-set-download');
+  assert.deepEqual(c.experimental.cache_file,{enabled:true,store_fakeip:true});
+  assert.equal(c.experimental.clash_api.external_controller,'127.0.0.1:9090');
   assert.equal(c.route.rules[2].outbound,'🧠 Anthropic');
   assert.equal(c.route.rules[3].outbound,'🧠 Anthropic');
   for(const rule of c.route.rules.filter(x=>x.wifi_ssid)) assert(c.route.rules.indexOf(rule)>3);

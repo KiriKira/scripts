@@ -552,6 +552,7 @@ function buildConfig(params) {
     config.endpoints.push(makeWarpEndpoint(warpProfiles.chain, WARP_CHAIN_TAG, aiSelector.tag));
   }
   config.experimental = {
+    cache_file: { enabled: true, store_fakeip: true },
     clash_api: {
       external_controller: "127.0.0.1:9090",
       external_ui: "",
