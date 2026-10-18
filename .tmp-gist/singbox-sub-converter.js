@@ -313,6 +313,8 @@ function buildConfig(params) {
   const exitWifi = params.exitWifi || "Synopsys";
   const warpProfiles = params.warpProfiles || null;
   const useHttpClients = params.useHttpClients !== false;
+  const dnsLocal = params.dnsLocal === true;
+  const dnsMode = params.dnsMode === "realip" ? "realip" : "fakeip";
   const nodeTags = proxies.map((p) => p.tag);
   const reservedTags = new Set([ANTHROPIC_TAG, WARP_TAG, WARP_CHAIN_TAG]);
   if (nodeTags.some((tag) => reservedTags.has(tag))) throw new Error("Subscription node tag conflicts with WARP/Anthropic tags");
@@ -455,19 +457,28 @@ function buildConfig(params) {
     outbound: "direct"
   });
   routeRules.push({ rule_set: ["geosite-geolocation-!cn"], outbound: mainProxy });
+  const dnsServers = [
+    dnsLocal
+      ? { tag: "dns_direct", type: "local" }
+      : { tag: "dns_direct", type: "https", server: "223.5.5.5", domain_resolver: "dns_resolver" },
+    { tag: "dns_proxy", type: "https", server: "1.1.1.1", domain_resolver: "dns_resolver", detour: mainProxy }
+  ];
+  if (dnsMode === "fakeip") {
+    dnsServers.push({ tag: "dns_fakeip", type: "fakeip", inet4_range: "28.0.0.0/8", inet6_range: "fc00::/16" });
+  }
+  // Bootstrap resolver stays direct so proxy/tunnel endpoints never depend on themselves.
+  dnsServers.push({ tag: "dns_resolver", type: "https", server: "223.5.5.5" });
+  const dnsRules = [
+    { domain_suffix: ["kiri.homes"], server: "dns_direct" },
+    { rule_set: ["geosite-cn"], server: "dns_direct" },
+    { rule_set: ["geosite-category-games-cn"], server: "dns_direct" }
+  ];
+  if (dnsMode === "fakeip") {
+    dnsRules.push({ query_type: ["A", "AAAA"], server: "dns_fakeip" });
+  }
   const dns = {
-    servers: [
-      { tag: "dns_direct", type: "https", server: "223.5.5.5", domain_resolver: "dns_resolver" },
-      { tag: "dns_proxy", type: "https", server: "1.1.1.1", domain_resolver: "dns_resolver", detour: mainProxy },
-      { tag: "dns_fakeip", type: "fakeip", inet4_range: "28.0.0.0/8", inet6_range: "fc00::/16" },
-      { tag: "dns_resolver", type: "https", server: "223.5.5.5" }
-    ],
-    rules: [
-      { domain_suffix: ["kiri.homes"], server: "dns_direct" },
-      { rule_set: ["geosite-cn"], server: "dns_direct" },
-      { rule_set: ["geosite-category-games-cn"], server: "dns_direct" },
-      { query_type: ["A", "AAAA"], server: "dns_fakeip" }
-    ],
+    servers: dnsServers,
+    rules: dnsRules,
     final: "dns_proxy",
     strategy: "prefer_ipv4",
     reverse_mapping: true
@@ -552,7 +563,7 @@ function buildConfig(params) {
     config.endpoints.push(makeWarpEndpoint(warpProfiles.chain, WARP_CHAIN_TAG, aiSelector.tag));
   }
   config.experimental = {
-    cache_file: { enabled: true, store_fakeip: true },
+    cache_file: dnsMode === "fakeip" ? { enabled: true, store_fakeip: true } : { enabled: true },
     clash_api: {
       external_controller: "127.0.0.1:9090",
       external_ui: "",
@@ -606,7 +617,7 @@ var index_default = {
       return new Response(
         JSON.stringify({
           error: 'Missing "sub" parameter',
-          usage: "GET /?sub=<clash_subscription_url>&headscale=<headscale_url>&hostname=<hostname>&auth_key=<auth_key>&exit_node=<node_name_or_ip>&exit_wifi=Synopsys",
+          usage: "GET /?sub=<clash_subscription_url>&headscale=<headscale_url>&hostname=<hostname>&auth_key=<auth_key>&exit_node=<node_name_or_ip>&exit_wifi=Synopsys&dns_local=0|1&dns_mode=fakeip|realip",
           params: {
             sub: "(required) Clash subscription URL",
             headscale: "(optional) Headscale server URL",
@@ -615,7 +626,9 @@ var index_default = {
             exit_node: "(optional) Tailscale/Headscale exit node name or IP; enables Wi-Fi override routing",
             exit_wifi: "(optional) Wi-Fi SSID for exit-node override, default: Synopsys",
             warp_key: "(optional) Access key for server-stored WARP profiles; enables direct WARP and AI-platform-to-WARP chain",
-            http_clients: "(optional) default 1; explicit remote rule-set HTTP client for sing-box 1.14+. Set 0 only for <=1.13 clients"
+            http_clients: "(optional) default 1; explicit remote rule-set HTTP client for sing-box 1.14+. Set 0 only for <=1.13 clients",
+            dns_local: "(optional) set 1 to resolve CN domains through the system/platform DNS instead of AliDNS DoH",
+            dns_mode: "(optional) fakeip (default) or realip; realip returns real addresses and relies on sniff plus reverse mapping"
           }
         }, null, 2),
         {
@@ -652,7 +665,9 @@ var index_default = {
         hostname: url.searchParams.get("hostname") || "sing-box-device",
         exitNode: url.searchParams.get("exit_node") || "",
         exitWifi: url.searchParams.get("exit_wifi") || "Synopsys",
-        useHttpClients: url.searchParams.get("http_clients") !== "0"
+        useHttpClients: url.searchParams.get("http_clients") !== "0",
+        dnsLocal: url.searchParams.get("dns_local") === "1",
+        dnsMode: url.searchParams.get("dns_mode") === "realip" ? "realip" : "fakeip"
       });
       return new Response(
         JSON.stringify(config, null, 2),

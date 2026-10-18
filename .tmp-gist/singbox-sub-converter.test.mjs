@@ -33,6 +33,21 @@ for(const warpProfiles of [null,{direct:profile(),chain:profile()}]) {
     for(const tag of graph.keys())visit(tag);
   }
 }
+for(const dnsLocal of [false,true]) for(const dnsMode of ['fakeip','realip']) {
+  const c=clone(context.buildConfig({...params,dnsLocal,dnsMode,warpProfiles:{direct:profile(),chain:profile()}}));
+  const direct=c.dns.servers.find(x=>x.tag==='dns_direct');
+  const fake=c.dns.servers.find(x=>x.tag==='dns_fakeip');
+  const ipRule=c.dns.rules.find(x=>x.query_type);
+  assert.equal(direct.type,dnsLocal?'local':'https');
+  if(!dnsLocal) assert.equal(direct.server,'223.5.5.5');
+  assert.equal(Boolean(fake),dnsMode==='fakeip');
+  assert.equal(Boolean(ipRule),dnsMode==='fakeip');
+  assert.equal(c.dns.servers.find(x=>x.tag==='dns_resolver').type,'https');
+  assert.equal(c.dns.final,'dns_proxy');
+  assert.equal(c.dns.reverse_mapping,true);
+  assert.equal(c.experimental.cache_file.store_fakeip,dnsMode==='fakeip'?true:undefined);
+  assert.equal(c.dns.rules.filter(x=>x.server==='dns_direct').length,3);
+}
 const legacy=clone(context.buildConfig({...params,useHttpClients:false}));
 assert(!legacy.http_clients);assert(!legacy.route.default_http_client);
 context.fetch=async()=>new Response('proxies:\n  - name: Fixture\n    type: socks5\n    server: 192.0.2.2\n    port: 1080\n');
@@ -41,4 +56,9 @@ for(const flag of ['', '&http_clients=0']) {
   assert.equal(response.status,200);
   const c=await response.json();assert.equal(Boolean(c.http_clients),!flag);
 }
-console.log('PASS: DNS proxy transport, HTTP-client default/legacy switch, highest Anthropic priority, shared-provider rules, WARP chain and acyclic dependencies');
+const variant=await (await context.index_default.fetch(new Request('https://example.com/?sub=https://fixture.invalid/&dns_local=1&dns_mode=realip'),{},{}));
+const vc=await variant.json();
+assert.equal(vc.dns.servers.find(x=>x.tag==='dns_direct').type,'local');
+assert(!vc.dns.servers.some(x=>x.type==='fakeip'));
+assert(!vc.experimental.cache_file.store_fakeip);
+console.log('PASS: DNS proxy transport, DNS local/realip variants, HTTP-client default/legacy switch, highest Anthropic priority, shared-provider rules, WARP chain and acyclic dependencies');
