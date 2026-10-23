@@ -571,6 +571,12 @@ function buildConfig(params) {
       default_mode: "Rule"
     }
   };
+  // Offer manual direct routing without adding it to automatic latency tests.
+  for (const outbound of config.outbounds) {
+    if (outbound.type === "selector" && !outbound.outbounds.includes("direct")) {
+      outbound.outbounds.push("direct");
+    }
+  }
   return config;
 }
 __name(buildConfig, "buildConfig");

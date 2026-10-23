@@ -13,6 +13,15 @@ const profile=()=>({address:['172.16.0.2/32'],private_key:randomBytes(32).toStri
 const params={clashData:{proxies:[{type:'socks',tag:'Japan Fixture',server:'192.0.2.2',server_port:1080}],proxyGroups:[],rules:[]},headscale:'https://headscale.example.com',authKey:'test-only',exitNode:'100.64.0.8',exitWifi:'Synopsys'};
 for(const warpProfiles of [null,{direct:profile(),chain:profile()}]) {
   const c=clone(context.buildConfig({...params,warpProfiles}));
+  assert.equal(c.outbounds.filter(x=>x.tag==='direct').length,1);
+  for(const o of c.outbounds) {
+    if(o.type==='selector') {
+      assert.equal(o.outbounds.filter(x=>x==='direct').length,1,o.tag);
+      assert.notEqual(o.default,'direct',o.tag);
+    }
+    if(o.type==='urltest') assert(!o.outbounds.includes('direct'),o.tag);
+  }
+  assert.equal(c.outbounds.find(x=>x.tag==='🚀 节点选择').default,'♻️ 自动选择');
   assert.equal(c.dns.servers.find(x=>x.tag==='dns_proxy').detour,'🚀 节点选择');
   assert(!c.dns.servers.find(x=>x.tag==='dns_resolver').detour);
   assert.deepEqual(c.http_clients,[{tag:'rule-set-download',detour:'🐟 漏网之鱼'}]);
