@@ -33,15 +33,16 @@ GET /?sub=<URL-encoded Clash 订阅>                    → 脱敏版（通用�
 
 ## 手工节点的组归属（独立出口）
 
-`EXTRA_NODES` 里的节点默认进「♻️ 自动选择」，并按节点名匹配地区组。只想让某个节点当某个分组的独立选项时，在 `src/extras.js` 的 `EXTRA_NODE_GROUPS` 里登记：
+`EXTRA_NODES` 里的节点默认进「♻️ 自动选择」，并按节点名匹配地区组。想让某个节点**只靠手动点名**使用时，在 `src/extras.js` 的 `EXTRA_NODE_GROUPS` 里登记：
 
 ```js
 export const EXTRA_NODE_GROUPS = {
-  'tencent-tokyo': ['🧠 Anthropic'],   // 只出现在 Anthropic 组，不进口径自动选择/地区组
+  'tencent-tokyo': ['🚀 节点选择', '🤖 AI 平台', '🧠 Anthropic'],
 };
 ```
 
-- 没登记的节点 → `null`，走默认策略；登记成数组 → 只进列出的组，插在该组 `DIRECT` 之前。
+- 没登记的节点 → `null`，走默认策略（自动选择 + 名称匹配的地区组）。
+- 登记成数组 → **只**进列出的组，插在该组 `DIRECT` 之前；既不进自动选择，也不进地区组（节点名里带 `Tokyo` 也不会自动落进 `🇯🇵 日本节点`），其它没列出的手动组也看不到它。
 - 表里只决定「出现在哪些组」，连接参数仍然只在 Worker secret 里。
 - 名称也参与不了地区组匹配：即使节点名里带 `Tokyo`，登记成显式列表后也不会进 `🇯🇵 日本节点`。
 

@@ -62,12 +62,15 @@ async function main() {
   diff(reference, conf);
   const structure = audit(conf);
   check(stats.sourceNodes === 31 && stats.nodes === 33 && stats.groups === 17 && stats.rules === 69 && stats.skipped === 0, 'Fixture count regression');
-  // 手工节点 tencent-tokyo 是 Anthropic 的独立出口：只进 Anthropic，不进自动选择/日本组
+  // 手工节点 tencent-tokyo：只手动点名（节点选择 / AI 平台 / Anthropic），不进自动选择与日本组
   const groupLine = name => conf.split('\n').find(line => line.startsWith(`${name} = `)) || '';
-  check(groupLine('🧠 Anthropic').includes('tencent-tokyo'), 'Dedicated extra node missing from Anthropic group');
-  check(!groupLine('♻️ 自动选择').includes('tencent-tokyo'), 'Dedicated extra node leaked into auto group');
-  check(!groupLine('🇯🇵 日本节点').includes('tencent-tokyo'), 'Dedicated extra node leaked into a country group');
-  check(!groupLine('🚀 节点选择').includes('tencent-tokyo'), 'Dedicated extra node leaked into manual selector');
+  for (const group of ['🚀 节点选择', '🤖 AI 平台', '🧠 Anthropic']) {
+    check(groupLine(group).includes('tencent-tokyo'), `Manual-only extra node missing from ${group}`);
+  }
+  check(!groupLine('♻️ 自动选择').includes('tencent-tokyo'), 'Manual-only extra node leaked into auto group');
+  check(!groupLine('🇯🇵 日本节点').includes('tencent-tokyo'), 'Manual-only extra node leaked into a country group');
+  check(!groupLine('🎥 奈飞视频').includes('tencent-tokyo'), 'Manual-only extra node leaked into an unrelated service group');
+  check(!groupLine('🐟 漏网之鱼').includes('tencent-tokyo'), 'Manual-only extra node leaked into the catch-all group');
   check(conf.includes('tencent-tokyo = vless,'), 'VLESS extra node line missing from [Proxy]');
   check(structure.proxies === stats.nodes + stats.infrastructure, 'Proxy count mismatch');
   console.log(`结构自检: PASS; rules=${structure.rules}, leaf conditions=${structure.conditions}, proxy policies=${structure.proxies}, groups=${structure.groups}; references/cycles/no-resolve OK`);
