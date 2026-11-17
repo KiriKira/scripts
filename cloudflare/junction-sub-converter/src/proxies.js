@@ -42,13 +42,15 @@ export function buildProxies(fields, extraText = '') {
     if (proxy) proxies.push(proxy); else skipped++;
   }
   const sourceCount = proxies.length;
+  const extraNames = [];
   for (const raw of String(extraText).split(/\r?\n/)) {
     const line = raw.trim();
     if (!line || line.startsWith('#')) continue;
-    const match = line.match(/^(.+?)\s*=\s*(trojan|hysteria2)\s*,/i);
+    const match = line.match(/^(.+?)\s*=\s*(trojan|hysteria2|vless)\s*,/i);
     if (!match) { skipped++; continue; }
     const name = safeName(match[1]);
     proxies.push({ name, line: `${name} = ${line.slice(line.indexOf('=') + 1).trim()}` });
+    extraNames.push(name);
   }
   if (!proxies.length) throw new Error('No supported proxy nodes');
   const names = proxies.map(proxy => proxy.name);
@@ -56,7 +58,7 @@ export function buildProxies(fields, extraText = '') {
   for (const reserved of ['DIRECT', 'REJECT', '☁️ WARP', '🔗 AI 平台 → WARP', 'Tailnet']) {
     if (names.includes(reserved)) throw new Error('Reserved proxy name');
   }
-  return { proxies, sourceCount, skipped };
+  return { proxies, sourceCount, skipped, extraNames };
 }
 export const infrastructureProxies = [
   { requires: ['warp'], line: '☁️ WARP = wireguard, section-name=warp' },

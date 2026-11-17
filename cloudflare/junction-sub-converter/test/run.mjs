@@ -61,7 +61,14 @@ async function main() {
   const { conf, stats } = convert(sample, env, full);
   diff(reference, conf);
   const structure = audit(conf);
-  check(stats.sourceNodes === 31 && stats.nodes === 32 && stats.groups === 17 && stats.rules === 69 && stats.skipped === 0, 'Fixture count regression');
+  check(stats.sourceNodes === 31 && stats.nodes === 33 && stats.groups === 17 && stats.rules === 69 && stats.skipped === 0, 'Fixture count regression');
+  // 手工节点 tencent-tokyo 是 Anthropic 的独立出口：只进 Anthropic，不进自动选择/日本组
+  const groupLine = name => conf.split('\n').find(line => line.startsWith(`${name} = `)) || '';
+  check(groupLine('🧠 Anthropic').includes('tencent-tokyo'), 'Dedicated extra node missing from Anthropic group');
+  check(!groupLine('♻️ 自动选择').includes('tencent-tokyo'), 'Dedicated extra node leaked into auto group');
+  check(!groupLine('🇯🇵 日本节点').includes('tencent-tokyo'), 'Dedicated extra node leaked into a country group');
+  check(!groupLine('🚀 节点选择').includes('tencent-tokyo'), 'Dedicated extra node leaked into manual selector');
+  check(conf.includes('tencent-tokyo = vless,'), 'VLESS extra node line missing from [Proxy]');
   check(structure.proxies === stats.nodes + stats.infrastructure, 'Proxy count mismatch');
   console.log(`结构自检: PASS; rules=${structure.rules}, leaf conditions=${structure.conditions}, proxy policies=${structure.proxies}, groups=${structure.groups}; references/cycles/no-resolve OK`);
 
@@ -115,7 +122,7 @@ async function main() {
   console.log('规则数据化/场景派生: PASS; adding one descriptor updates base + scenario without emitter changes');
 
   const publicResult = convert(sample, env, PUBLIC_FEATURES);
-  const forbidden = ['Tailnet', 'Synopsys', 'DOWNTOWNBABY', 'kiri.homes', 'WARP', 'litemoe',
+  const forbidden = ['Tailnet', 'Synopsys', 'DOWNTOWNBABY', 'kiri.homes', 'WARP', 'litemoe', 'tencent-tokyo', 'tkproxy.openkiri.zip',
     'com.tencent.mm', 'com.kirikira.rednote.fold', 'com.example.piliplus', 'com.callagent.host',
     '[SSID Setting]', '[WireGuard', '[Tailscale', '10.0.0.0/24', '192.168.31.0/24'];
   function publicSafe(text) {
@@ -158,7 +165,7 @@ async function main() {
   const fullAddress = address + '&key=' + encodeURIComponent(env.ACCESS_KEY);
   let result = await handler(new Request(fullAddress), env);
   check(result.status === 200 && await result.text() === conf, 'Correct key must return full reference configuration');
-  check(result.headers.get('Cache-Control') === 'no-store' && result.headers.get('X-Junction-Nodes') === '32', 'Missing safe response headers');
+  check(result.headers.get('Cache-Control') === 'no-store' && result.headers.get('X-Junction-Nodes') === '33', 'Missing safe response headers');
   for (const suffix of ['', '&key=' + randomBytes(24).toString('hex'), '&key=']) {
     result = await handler(new Request(address + suffix), env);
     const body = await result.text();

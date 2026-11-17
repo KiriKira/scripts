@@ -27,9 +27,31 @@ GET /?sub=<URL-encoded Clash 订阅>                    → 脱敏版（通用�
 | `WARP_ACCESS_KEY` | 历史 fixture 兼容用，代码不参与授权 |
 | `TS_AUTH_KEY` | Tailscale / Headscale 认证 key |
 | `TS_CONTROL_URL` | 控制服务器地址（https） |
-| `EXTRA_NODES` | 多行 Surge trojan / hysteria2 代理定义，仅完整版添加 |
+| `EXTRA_NODES` | 多行 Surge 代理定义（`trojan` / `hysteria2` / `vless`），仅完整版添加 |
 
 `WARP_PROFILES` 结构：`private_key`、`address`（数组）、`mtu`、`peers`（数组，peer 用 `public_key`、`address`、`port`、`allowed_ips`、可选 `reserved` 三字节 → 输出为 `client-id`）。
+
+## 手工节点的组归属（独立出口）
+
+`EXTRA_NODES` 里的节点默认进「♻️ 自动选择」，并按节点名匹配地区组。只想让某个节点当某个分组的独立选项时，在 `src/extras.js` 的 `EXTRA_NODE_GROUPS` 里登记：
+
+```js
+export const EXTRA_NODE_GROUPS = {
+  'tencent-tokyo': ['🧠 Anthropic'],   // 只出现在 Anthropic 组，不进口径自动选择/地区组
+};
+```
+
+- 没登记的节点 → `null`，走默认策略；登记成数组 → 只进列出的组，插在该组 `DIRECT` 之前。
+- 表里只决定「出现在哪些组」，连接参数仍然只在 Worker secret 里。
+- 名称也参与不了地区组匹配：即使节点名里带 `Tokyo`，登记成显式列表后也不会进 `🇯🇵 日本节点`。
+
+`vless` 节点可以直接写 Surge 语法（REALITY + Vision 常态部署）：
+
+```text
+tencent-tokyo = vless, tkproxy.example.com, 28443, username=<UUID>, flow=xtls-rprx-vision, sni=www.microsoft.com, reality-public-key=<pbk>, reality-short-id=<sid>
+```
+
+分享链接里的 `encryption=none`、`type=tcp` 是默认值可省；`fp` 不生效（Surge 用自带 BoringSSL 的 ClientHello）。REALITY 下 `sni` 必须是服务端 `serverNames` 之一。
 
 ## 目录结构
 
@@ -41,6 +63,7 @@ src/
   clash.js           纯 JS 的 Clash YAML 子集解析器
   proxies.js         trojan / hysteria2 转换、secret 补充节点
   groups.js          国家 smart 组、服务 select 组、成员能力归属
+  extras.js          手工补充节点的组归属（独立出口）
   sections.js        [General] [SSID Setting] [WireGuard] [Tailscale]
   emitter.js         唯一的普通规则 / 逻辑规则序列化器
   rules/
