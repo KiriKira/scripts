@@ -1,0 +1,13 @@
+# 私有验收 fixture（含真实节点凭据），不入库
+clash_sample.yaml
+reference.conf
+reference-public.conf
+fixtures.json
+*.local.yaml
+*.local.conf
+
+# 本地产物
+__pycache__/
+*.pyc
+node_modules/
+dist/
